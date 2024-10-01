@@ -44,7 +44,7 @@
             border-color: #00ff41;
         }
 
-        .btn-primary {
+        .btn-primary, .btn-danger {
             background-color: #00ff41;
             border: 1px solid #00ff41;
             color: black;
@@ -52,21 +52,15 @@
             text-shadow: 0 0 5px black;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover, .btn-danger:hover {
             background-color: black;
             color: #00ff41;
             border: 1px solid #00ff41;
             box-shadow: 0 0 10px #00ff41;
         }
 
-        .card-text {
-            color: #00ff41;
-        }
-
-        /* Efeito de brilho nos botões e textos */
         .neon-text {
-            color: #00ff41;
-            text-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41, 0 0 15px #00ff41;
+            text-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
         }
 
         .historico {
@@ -80,6 +74,18 @@
 
         .card {
             margin-bottom: 10px;
+        }
+
+        /* Estilos do Canvas para fogos de artifício */
+        #fireworksCanvas {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+            pointer-events: none;
         }
     </style>
     <script>
@@ -109,6 +115,15 @@
                 saidaRealDiv.style.display = "block";
             } else {
                 saidaRealDiv.style.display = "none";
+            }
+        }
+
+        function toggleSaidaAntes() {
+            const saidaAntesDiv = document.getElementById("saidaAntesDiv");
+            if (document.getElementById("saidaAntesCheck").checked) {
+                saidaAntesDiv.style.display = "block";
+            } else {
+                saidaAntesDiv.style.display = "none";
             }
         }
 
@@ -147,6 +162,17 @@
             let horaSaidaFormatada = horaSaidaDate.getHours().toString().padStart(2, '0');
             let minutoSaidaFormatado = horaSaidaDate.getMinutes().toString().padStart(2, '0');
 
+            // Se selecionado para sair antes, usar o horário inserido
+            if (document.getElementById("saidaAntesCheck").checked) {
+                let saidaAntes = document.getElementById("horaSaidaAntes").value;
+                let [horaAntes, minutoAntes] = saidaAntes.split(":").map(Number);
+
+                horaSaidaFormatada = horaAntes.toString().padStart(2, '0');
+                minutoSaidaFormatado = minutoAntes.toString().padStart(2, '0');
+
+                horaSaidaDate = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), horaAntes, minutoAntes);
+            }
+
             document.getElementById("horaExataSaida").innerText = `Você pode sair às: ${horaSaidaFormatada}:${minutoSaidaFormatado}`;
 
             // Verifica se saiu no horário correto e calcula saldo de horas
@@ -171,6 +197,7 @@
                 } else {
                     saldoHoras = "00h00m (No horário)";
                     document.getElementById("resultadoSaida").innerText = "Você saiu no horário exato.";
+                    comemorar();  // Chama a função para fogos de artifício se saiu no horário
                 }
             }
 
@@ -234,6 +261,71 @@
             });
         }
 
+        function limparHistorico() {
+            localStorage.removeItem("historicoSaida");
+            mostrarHistorico();
+        }
+
+        // Função para comemorar com fogos de artifício
+        function comemorar() {
+            const canvas = document.getElementById('fireworksCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block';
+
+            // Configurações de fogos de artifício
+            const fireworks = [];
+            const maxFireworks = 5;
+            const maxSparks = 50;
+
+            for (let i = 0; i < maxFireworks; i++) {
+                const firework = {
+                    sparks: []
+                };
+                for (let n = 0; n < maxSparks; n++) {
+                    const spark = {
+                        vx: Math.random() * 5 + 0.5,
+                        vy: Math.random() * 5 + 0.5,
+                        weight: Math.random() * 0.3 + 0.03,
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        color: `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 1)`
+                    };
+                    if (Math.random() > 0.5) spark.vx = -spark.vx;
+                    if (Math.random() > 0.5) spark.vy = -spark.vy;
+                    firework.sparks.push(spark);
+                }
+                fireworks.push(firework);
+            }
+
+            function updateCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                fireworks.forEach((firework) => {
+                    firework.sparks.forEach((spark) => {
+                        ctx.beginPath();
+                        ctx.fillStyle = spark.color;
+                        ctx.arc(spark.x, spark.y, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                        spark.vy += spark.weight;
+                        spark.x += spark.vx;
+                        spark.y += spark.vy;
+                        if (spark.y > canvas.height) spark.y = Math.random() * canvas.height / 2;
+                        if (spark.x > canvas.width || spark.x < 0) spark.vx = -spark.vx;
+                    });
+                });
+            }
+
+            function startFireworks() {
+                setInterval(updateCanvas, 50);
+
+                // Parar os fogos após 5 segundos
+                setTimeout(() => {
+                    canvas.style.display = 'none';
+                }, 5000);
+            }
+
+            startFireworks();
+        }
+
         window.onload = mostrarHistorico;
     </script>
 </head>
@@ -263,6 +355,16 @@
             </div>
 
             <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="saidaAntesCheck" onclick="toggleSaidaAntes()">
+                <label for="saidaAntesCheck" class="form-check-label">Vou sair antes do horário</label>
+            </div>
+
+            <div id="saidaAntesDiv" class="mb-3" style="display:none;">
+                <label for="horaSaidaAntes" class="form-label">Horário de Saída Antecipada (HH:MM): </label>
+                <input type="time" class="form-control" id="horaSaidaAntes">
+            </div>
+
+            <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="saidaCheck" onclick="toggleSaidaReal()">
                 <label for="saidaCheck" class="form-check-label">Não saí no horário previsto</label>
             </div>
@@ -283,6 +385,7 @@
             </div>
 
             <button class="btn btn-primary" onclick="calcularSaida()">Calcular Hora de Saída</button>
+            <button class="btn btn-danger mt-3" onclick="limparHistorico()">Limpar Histórico</button>
 
             <h2 class="mt-4 neon-text" id="horaExataSaida"></h2>
             <h2 id="horaSaida"></h2>
@@ -291,6 +394,9 @@
 
         <h3 class="text-center mt-4 neon-text">Histórico de Saídas</h3>
         <div id="historicoSaida" class="historico"></div>
+
+        <!-- Canvas para os fogos de artifício -->
+        <canvas id="fireworksCanvas" width="800" height="600"></canvas>
     </div>
 
     <!-- Incluindo o JS do Bootstrap -->
